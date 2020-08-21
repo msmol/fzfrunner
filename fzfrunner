@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+cd /usr/share/applications
+APPLICATIONS=$(ls | xargs cat | grep ^Name= | sed 's/^Name=/APPS /')
+
+cd "$PASSWORD_STORE_DIR"
+PASSLIST=$(tree -Ffi | grep '.gpg' | sed 's/.gpg$//g' | sed 's/^..//' | sed 's/^/PASS /')
+
+SELECTED=$(echo "$APPLICATIONS$PASSLIST" | fzf --print-query | tail -n1)
+
+if [[ "$SELECTED" =~ ^"PASS "  ]]; then # it's a password, treat it as such
+  SELECTED=$(echo $SELECTED | sed 's/^PASS //') # get rid of "PASS " prefix
+
+  if [[ $SELECTED =~ "totp::/" ]]; then
+    wl-copy "$(pass otp $SELECTED)"
+    notify-send "Copied OTP to clipboard" "$SELECTED"
+    exit 0
+  else
+    PASS_TYPE=$(cat <<EOF | fzf
+Password
+Username
+EOF
+);
+  fi
+
+  PASS_DATA="$(pass "$SELECTED")"
+  USERNAME="$(echo "$PASS_DATA" | grep login: | sed 's/login: //')"
+  PASS="$(echo "$PASS_DATA" | head -n 1)"
+
+  case "$PASS_TYPE" in
+    Username)
+      wl-copy "$USERNAME"
+      notify-send "Copied username to clipboard" "$SELECTED"
+      ;;
+    Password)
+      wl-copy "$PASS"
+      notify-send "Copied password to clipboard" "$SELECTED"
+      ;;
+    *)
+      exit 1
+  esac
+elif [[ "$SELECTED" =~ ^"APPS " ]]; then # it's an app in /usr/share/applications
+  cd /usr/share/applications
+  NAME=$(echo "$SELECTED" | sed 's/^APPS //')
+  APP_FILE=$(
+    grep -r "^Name=$NAME$" /usr/share/applications/ \
+    | head -n1 \
+    | sed 's/\/usr\/share\/applications\///' \
+    | sed "s/.desktop:Name=$NAME$//"
+  )
+  swaymsg -t command exec "/usr/bin/gtk-launch $APP_FILE"
+else # not a password, not an app, just run the command
+  swaymsg -t command exec $SELECTED
+  exit 0
+fi
