@@ -6,10 +6,10 @@ This script is inspired by:
 - [krunner-pass](https://github.com/akermu/krunner-pass)
 
 As a former Plasma/krunner (+ krunner-pass) user that has switched to Sway,
-I wanted a unified runner that can launch:
+I wanted a unified runner that can:
 
-- passwords stored in my $PASSWORD_STORE_DIR
-- applications in /usr/share/applications
+- copy passwords stored in my $PASSWORD_STORE_DIR to my clipboard
+- launch applications in /usr/share/applications
 - fallback to simply run the command "as-is" if entry is neither of the above
 
 ### Usage
