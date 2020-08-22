@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-read -r -d '' PY_PRINT << EOM
+read -r -d '' PY_PRINT <<EOM
 import sys
 
 try:
@@ -9,61 +9,65 @@ except:
     pass
 EOM
 
-cd /usr/share/applications
-APPLICATIONS=$(ls | xargs cat | grep ^Name= | sed 's/^Name=/APPS /')
+handle_pass() {
+  local pass_entry=$1
+  pass_entry=$(echo "${pass_entry}" | sed 's/^PASS //') # get rid of "PASS " prefix
 
-cd "$PASSWORD_STORE_DIR"
-PASSLIST=$(tree -Ffi | grep '.gpg' | sed 's/.gpg$//g' | sed 's/^..//' | sed 's/^/PASS /')
-
-SELECTED=$(echo "$APPLICATIONS$PASSLIST" \
-| fzf \
-  --print-query \
-  --preview-window=down:1 \
-  --preview "python <(printf '%s\n' \"${PY_PRINT}\") {q}" \
-| tail -n1)
-
-if [[ "$SELECTED" =~ ^"PASS "  ]]; then # it's a password, treat it as such
-  SELECTED=$(echo $SELECTED | sed 's/^PASS //') # get rid of "PASS " prefix
-
-  if [[ $SELECTED =~ "totp::/" ]]; then
-    wl-copy "$(pass otp $SELECTED)"
-    notify-send "Copied OTP to clipboard" "$SELECTED"
-    exit 0
+  if [[ ${pass_entry} =~ "totp::/" ]]; then
+    wl-copy "$(pass otp "${pass_entry}")"
+    notify-send "Copied OTP to clipboard" "${pass_entry}"
   else
-    PASS_TYPE=$(cat <<EOF | fzf
+    local pass_type=$(
+      cat <<EOF | fzf
 Password
 Username
 EOF
-);
+    )
   fi
 
-  PASS_DATA="$(pass "$SELECTED")"
-  USERNAME="$(echo "$PASS_DATA" | grep login: | sed 's/login: //')"
-  PASS="$(echo "$PASS_DATA" | head -n 1)"
+  local pass_data="$(pass "${pass_entry}")"
 
-  case "$PASS_TYPE" in
-    Username)
-      wl-copy "$USERNAME"
-      notify-send "Copied username to clipboard" "$SELECTED"
-      ;;
-    Password)
-      wl-copy "$PASS"
-      notify-send "Copied password to clipboard" "$SELECTED"
-      ;;
-    *)
-      exit 1
+  case "${pass_type}" in
+  Username)
+    wl-copy "$(echo "${pass_data}" | grep login: | sed 's/login: //')"
+    notify-send "Copied username to clipboard" "${pass_entry}"
+    ;;
+  Password)
+    wl-copy "$(echo "${pass_data}" | head -n 1)"
+    notify-send "Copied password to clipboard" "${pass_entry}"
+    ;;
   esac
-elif [[ "$SELECTED" =~ ^"APPS " ]]; then # it's an app in /usr/share/applications
+}
+
+handle_app() {
   cd /usr/share/applications
-  NAME=$(echo "$SELECTED" | sed 's/^APPS //')
-  APP_FILE=$(
-    grep -r "^Name=$NAME$" /usr/share/applications/ \
-    | head -n1 \
-    | sed 's/\/usr\/share\/applications\///' \
-    | sed "s/.desktop:Name=$NAME$//"
+  local app_name=$(echo "${SELECTED}" | sed 's/^APPS //')
+  local app_file=$(
+    grep -r "^Name=${app_name}$" /usr/share/applications/ |
+      head -n1 |
+      sed 's/\/usr\/share\/applications\///' |
+      sed "s/.desktop:Name=${app_name}$//"
   )
-  swaymsg -t command exec "/usr/bin/gtk-launch $APP_FILE"
+  swaymsg -t command exec "/usr/bin/gtk-launch ${app_file}"
+}
+
+cd /usr/share/applications
+APPLICATIONS=$(ls | xargs cat | grep ^Name= | sed 's/^Name=/APPS /')
+
+cd "${PASSWORD_STORE_DIR}"
+PASSLIST=$(tree -Ffi | grep '.gpg' | sed 's/.gpg$//g' | sed 's/^..//' | sed 's/^/PASS /')
+
+SELECTED=$(echo "${APPLICATIONS}${PASSLIST}" |
+  fzf \
+    --print-query \
+    --preview-window=down:1 \
+    --preview "python <(printf '%s\n' \"${PY_PRINT}\") {q}" |
+  tail -n1)
+
+if [[ "${SELECTED}" =~ ^"PASS " ]]; then # it's a password, treat it as such
+  handle_pass "${SELECTED}"
+elif [[ "${SELECTED}" =~ ^"APPS " ]]; then # it's an app in /usr/share/applications
+  handle_app "${SELECTED}"
 else # not a password, not an app, just run the command
-  swaymsg -t command exec $SELECTED
-  exit 0
+  swaymsg -t command exec "${SELECTED}"
 fi
