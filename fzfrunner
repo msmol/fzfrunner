@@ -11,37 +11,29 @@ EOM
 
 handle_pass() {
   local pass_entry=$1
-  pass_entry=$(echo "${pass_entry}" | sed 's/^PASS //') # get rid of "PASS " prefix
+  local alt_action=$2
+  pass_entry=$(echo "${pass_entry}" | sed 's/^PASS //')
 
   if [[ ${pass_entry} =~ "totp::/" ]]; then
     wl-copy "$(pass otp "${pass_entry}")"
     notify-send "Copied OTP to clipboard" "${pass_entry}"
-  else
-    local pass_type=$(
-      cat <<EOF | fzf
-Password
-Username
-EOF
-    )
   fi
 
   local pass_data="$(pass "${pass_entry}")"
 
-  case "${pass_type}" in
-  Username)
+  if [[ ${alt_action} = 1 ]]; then
     wl-copy "$(echo "${pass_data}" | grep login: | sed 's/login: //')"
     notify-send "Copied username to clipboard" "${pass_entry}"
-    ;;
-  Password)
+  else
     wl-copy "$(echo "${pass_data}" | head -n 1)"
     notify-send "Copied password to clipboard" "${pass_entry}"
-    ;;
-  esac
+  fi
 }
 
 handle_app() {
+  local selected_app=$1
   cd /usr/share/applications
-  local app_name=$(echo "${SELECTED}" | sed 's/^APPS //')
+  local app_name=$(echo "${selected_app}" | sed 's/^APPS //')
   local app_file=$(
     grep -r "^Name=${app_name}$" /usr/share/applications/ |
       head -n1 |
@@ -61,12 +53,21 @@ SELECTED=$(echo "${APPLICATIONS}${PASSLIST}" |
   fzf \
     --print-query \
     --preview-window=down:1 \
-    --preview "python <(printf '%s\n' \"${PY_PRINT}\") {q}" |
-  tail -n1)
+    --preview "python <(printf '%s\n' \"${PY_PRINT}\") {q}" \
+    --bind 'alt-enter:execute(echo ALT {})+accept')
 
-if [[ "${SELECTED}" =~ ^"PASS " ]]; then # it's a password, treat it as such
-  handle_pass "${SELECTED}"
-elif [[ "${SELECTED}" =~ ^"APPS " ]]; then # it's an app in /usr/share/applications
+# determine if user want alternate action
+if [[ "${SELECTED}" =~ ^"ALT " ]]; then
+  SELECTED=$(echo "${SELECTED}" | head -n1 | sed 's/^ALT //')
+  ALT=1
+else
+  SELECTED=$(echo "${SELECTED}" | tail -n1)
+  ALT=0
+fi
+
+if [[ "${SELECTED}" =~ ^"PASS " ]]; then
+  handle_pass "${SELECTED}" "${ALT}"
+elif [[ "${SELECTED}" =~ ^"APPS " ]]; then
   handle_app "${SELECTED}"
 else # not a password, not an app, just run the command
   swaymsg -t command exec "${SELECTED}"
