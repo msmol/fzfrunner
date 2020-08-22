@@ -1,12 +1,26 @@
 #!/usr/bin/env bash
 
+read -r -d '' PY_PRINT << EOM
+import sys
+
+try:
+    print(eval(sys.argv[1]))
+except:
+    pass
+EOM
+
 cd /usr/share/applications
 APPLICATIONS=$(ls | xargs cat | grep ^Name= | sed 's/^Name=/APPS /')
 
 cd "$PASSWORD_STORE_DIR"
 PASSLIST=$(tree -Ffi | grep '.gpg' | sed 's/.gpg$//g' | sed 's/^..//' | sed 's/^/PASS /')
 
-SELECTED=$(echo "$APPLICATIONS$PASSLIST" | fzf --print-query | tail -n1)
+SELECTED=$(echo "$APPLICATIONS$PASSLIST" \
+| fzf \
+  --print-query \
+  --preview-window=down:1 \
+  --preview "python <(printf '%s\n' \"${PY_PRINT}\") {q}" \
+| tail -n1)
 
 if [[ "$SELECTED" =~ ^"PASS "  ]]; then # it's a password, treat it as such
   SELECTED=$(echo $SELECTED | sed 's/^PASS //') # get rid of "PASS " prefix

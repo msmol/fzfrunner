@@ -10,7 +10,8 @@ I wanted a unified runner that can:
 
 - copy passwords stored in my $PASSWORD_STORE_DIR to my clipboard
 - launch applications in /usr/share/applications
-- fallback to simply run the command "as-is" if entry is neither of the above
+- evaluate math: type "1+1" and have it display "2" in the preview
+- fallback to simply run the command "as-is" if entry is none of the above
 
 ### Usage
 
