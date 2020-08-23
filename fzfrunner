@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
 
-# make sure working dir is always directory of script itself
-cd "$(dirname "${BASH_SOURCE[0]}")"
+if [ -d "${HOME}/.config/fzfrunner/runners" ]; then
+  RUNNERS_DIR="${HOME}/.config/fzfrunner/runners"
+else
+  RUNNERS_DIR="$(dirname "${BASH_SOURCE[0]}")/runners"
+fi
 ALT_PREFIX="ALT::"
+
+runner_enabled() {
+  if [ -f "${HOME}/.config/fzfrunner/config" ]; then
+    sed -nr "/^\[runners\]/ { :l /^$1[ ]*=/ { s/.*=[ ]*//; p; q;}; n; b l;}" "${HOME}/.config/fzfrunner/config"
+  else
+    echo 1
+  fi
+}
 
 read -r -d '' PY_PRINT <<EOM
 import sys
@@ -15,10 +26,12 @@ EOM
 
 FZF_LIST=""
 
-for f in ./runners/*
-do
-  source "$f"
-  FZF_LIST="${FZF_LIST}$(get_list)"
+for f in "${RUNNERS_DIR}"/*; do
+  RUNNER="$(echo ${f##*/} | cut -d'.' -f1)"
+  if [[ $(runner_enabled "${RUNNER}") == "1" ]]; then
+    source "${f}"
+    FZF_LIST="${FZF_LIST}$(get_list)"
+  fi
 done
 
 SELECTED=$(echo "${FZF_LIST}" |
@@ -26,6 +39,7 @@ SELECTED=$(echo "${FZF_LIST}" |
     --print-query \
     --preview-window=down:1 \
     --preview "python <(printf '%s\n' \"${PY_PRINT}\") {q}" \
+    --no-info \
     --bind "alt-enter:execute(echo ${ALT_PREFIX}{})+accept")
 
 if [[ "${SELECTED}" =~ ^"${ALT_PREFIX}" ]]; then
@@ -36,11 +50,13 @@ else
   ALT=0
 fi
 
-for f in ./runners/*
-do
-  source "${f}"
-  if [[ "${SELECTED}" =~ ^"$(get_prefix)" ]]; then
-    handle "${SELECTED}" "${ALT}"
-    exit 0
+for f in "${RUNNERS_DIR}"/*; do
+  RUNNER="$(echo ${f##*/} | cut -d'.' -f1)"
+  if [[ $(runner_enabled "${RUNNER}") == "1" ]]; then
+    source "${f}"
+    if [[ "${SELECTED}" =~ ^"$(get_prefix)" ]]; then
+      handle "${SELECTED}" "${ALT}"
+      exit 0
+    fi
   fi
 done
