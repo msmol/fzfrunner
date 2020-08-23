@@ -18,7 +18,7 @@ FZF_LIST=""
 for f in ./runners/*
 do
   source "$f"
-	FZF_LIST="${FZF_LIST}$(get_list)"
+  FZF_LIST="${FZF_LIST}$(get_list)"
 done
 
 SELECTED=$(echo "${FZF_LIST}" |
