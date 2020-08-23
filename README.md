@@ -47,7 +47,7 @@ If no config file exists, all runners in the `runners/` directory will be active
 
 Runners must be in a `runners/` directory. This directory should be `$HOME/.config/fzfrunners/runners`
 If this directory does not exist, the script will fall back to `runners/` defined in the same directory as the `fzfrunner` script itself,
-as in this repostiry.
+as in this repository.
 
 ### TODO
 - More runners
