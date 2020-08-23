@@ -38,8 +38,8 @@ fi
 
 for f in ./runners/*
 do
-	source "${f}"
-	if [[ "${SELECTED}" =~ ^"$(get_prefix)" ]]; then
+  source "${f}"
+  if [[ "${SELECTED}" =~ ^"$(get_prefix)" ]]; then
     handle "${SELECTED}" "${ALT}"
     exit 0
   fi
