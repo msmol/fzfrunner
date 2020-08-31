@@ -30,13 +30,17 @@ for f in "${RUNNERS_DIR}"/*; do
   RUNNER="$(echo ${f##*/} | cut -d'.' -f1)"
   if [[ $(runner_enabled "${RUNNER}") == "1" ]]; then
     source "${f}"
-    FZF_LIST="${FZF_LIST}$(get_list)"
+    FZF_LIST="${FZF_LIST}$(get_list)"$'\n'
   fi
 done
+
+FZF_HISTORY=$(cat "${HOME}/.fzfrunner_history")
+FZF_LIST="${FZF_LIST}"$'\n'${FZF_HISTORY}
 
 SELECTED=$(echo "${FZF_LIST}" |
   fzf \
     --print-query \
+    --history="${HOME}/.fzfrunner_history"
     --preview-window=down:1 \
     --preview "python <(printf '%s\n' \"${PY_PRINT}\") {q}" \
     --no-info \
