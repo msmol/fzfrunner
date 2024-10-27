@@ -40,7 +40,7 @@ SELECTED=$(echo "${FZF_LIST}" |
     --preview-window=down:1 \
     --preview "python <(printf '%s\n' \"${PY_PRINT}\") {q}" \
     --no-info \
-    --bind "alt-enter:execute(echo ${ALT_PREFIX}{})+accept")
+    --bind "alt-enter:become(echo ${ALT_PREFIX}{})+accept")
 
 if [[ "${SELECTED}" =~ ^"${ALT_PREFIX}" ]]; then
   SELECTED=$(echo "${SELECTED}" | head -n1 | sed "s/^${ALT_PREFIX}//")
