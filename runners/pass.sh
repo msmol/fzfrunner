@@ -3,7 +3,7 @@ handle() {
   local alt_action=$2
   pass_entry=$(echo "${pass_entry}" | sed "s/^$(get_prefix)//")
 
-  if [[ ${pass_entry} =~ "totp::/" ]]; then
+  if [[ ${pass_entry} =~ "totp/" ]]; then
     wl-copy "$(pass otp "${pass_entry}")"
     notify-send "Copied OTP to clipboard" "${pass_entry}"
     exit 0
